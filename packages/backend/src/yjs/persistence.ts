@@ -10,6 +10,7 @@ export function createYjsPersistence(prisma: PrismaClient) {
 		const prev = debounceByDoc.get(docName);
 		if (prev) clearTimeout(prev as any);
 		const handle = setTimeout(() => {
+            console.log("[yjs][persist] saving snapshot");
 			persistFullSnapshot(docName, ydoc).catch((err) => {
 				console.error('[yjs][persist] error', err);
 			});
@@ -19,7 +20,14 @@ export function createYjsPersistence(prisma: PrismaClient) {
 
 	const persistFullSnapshot = async (docName: string, ydoc: Y.Doc) => {
 		const ytableData = ydoc.getArray<Y.Array<string>>('table-data');
+		const ymetadata = ydoc.getMap('table-metadata');
 		const newCells: { tableId: string; rowIndex: number; colIndex: number; value: string }[] = [];
+
+		// compute rows/cols from current doc for robustness
+		const rowsCount = ytableData.length;
+		let maxCols = 0;
+		ytableData.forEach((yrow) => { if (yrow.length > maxCols) maxCols = yrow.length; });
+
 		ytableData.forEach((yrow, rowIndex) => {
 			for (let colIndex = 0; colIndex < yrow.length; colIndex++) {
 				const value = yrow.get(colIndex) as unknown as string;
@@ -28,9 +36,17 @@ export function createYjsPersistence(prisma: PrismaClient) {
 				}
 			}
 		});
+		const newTableEntry = {
+			rows: (ymetadata.get('rows') as number) ?? rowsCount,
+			cols: (ymetadata.get('cols') as number) ?? maxCols,
+		};
 
 		const ops: any[] = [
 			prisma.tableCell.deleteMany({ where: { tableId: docName } }),
+			prisma.table.update({
+				where: { id: docName },
+				data: newTableEntry,
+			}),
 		];
 		if (newCells.length) {
 			ops.push(prisma.tableCell.createMany({ data: newCells }));
@@ -40,27 +56,32 @@ export function createYjsPersistence(prisma: PrismaClient) {
 
 	const hydrateIfEmpty = async (docName: string, ydoc: Y.Doc) => {
 		const ytableData = ydoc.getArray<Y.Array<string>>('table-data');
-		const ymetadata = ydoc.getMap('table-metadata');
+		const ymetadata = ydoc.getMap('table-metadata')
 		if (ytableData.length > 0) return;
 
-		const cells = await prisma.tableCell.findMany({ where: { tableId: docName } });
-		if (cells.length === 0) return;
+		const tableEntry = await prisma.table.findUnique({ where: { id: docName } });
+		if (!tableEntry) return;
 
+		const cells = await prisma.tableCell.findMany({ where: { tableId: docName } });
+
+		// determine required matrix size from both DB table metadata and actual cells
 		let maxRow = 0;
 		let maxCol = 0;
 		for (const c of cells) {
 			if (c.rowIndex > maxRow) maxRow = c.rowIndex;
 			if (c.colIndex > maxCol) maxCol = c.colIndex;
 		}
-		const rows = maxRow + 1;
-		const cols = maxCol + 1;
+		const rowsFromCells = cells.length ? maxRow + 1 : 0;
+		const colsFromCells = cells.length ? maxCol + 1 : 0;
+		const rows = Math.max(tableEntry?.rows || 0, rowsFromCells);
+		const cols = Math.max(tableEntry?.cols || 0, colsFromCells);
 
 		Y.transact(ydoc, () => {
 			// set metadata
 			ymetadata.set('rows', rows);
 			ymetadata.set('cols', cols);
-			if (!ymetadata.get('title')) ymetadata.set('title', '');
-			if (!ymetadata.get('description')) ymetadata.set('description', '');
+            ymetadata.set('title', tableEntry.name);
+            console.log("hydrating table metadata title:", ymetadata.get('title'));
 
 			// ensure rows
 			while (ytableData.length < rows) {
@@ -74,12 +95,15 @@ export function createYjsPersistence(prisma: PrismaClient) {
 				const yrow = ytableData.get(r);
 				while (yrow.length < cols) yrow.push(['']);
 			}
-			// fill values
+			// fill values (if any)
 			for (const c of cells) {
 				const yrow = ytableData.get(c.rowIndex);
+				if (!yrow) continue; // safety guard
 				// replace value at col
-				yrow.delete(c.colIndex, 1);
-				yrow.insert(c.colIndex, [c.value]);
+				if (c.colIndex < yrow.length) {
+					yrow.delete(c.colIndex, 1);
+					yrow.insert(c.colIndex, [c.value]);
+				}
 			}
 		});
 	};
@@ -93,10 +117,8 @@ export function createYjsPersistence(prisma: PrismaClient) {
 			}
 			const ytableData = ydoc.getArray('table-data');
 			const onDeep = () => {
-				console.log('[yjs][hydrate] observing deep changes');
 				schedulePersist(docName, ydoc);
 			};
-            console.log('[yjs][hydrate] observing deep changes');
 			ytableData.observeDeep(onDeep);
 			// return unbind
 			return () => {

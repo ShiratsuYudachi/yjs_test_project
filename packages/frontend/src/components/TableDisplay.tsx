@@ -6,7 +6,6 @@ export interface TableMetadata {
 	rows: number;
 	cols: number;
 	title?: string;
-	description?: string;
 }
 
 interface TableDisplayProps {
@@ -46,11 +45,9 @@ export const TableDisplay: React.FC<TableDisplayProps> = ({
 		<Container className="py-8">
 			<div className="mb-6">
 				<Title order={2} className="mb-4">
-					{metadata.title || 'Collaborative Table'}
+					{metadata.title}
 				</Title>
-				<p className="text-gray-600 mb-4">
-					{metadata.description}
-				</p>
+
 				<div className="flex gap-2 mb-4">
 					<Button onClick={addNewRow}>Add New Row</Button>
 					<Button onClick={addNewCol} variant="outline">Add New Column</Button>

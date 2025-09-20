@@ -51,7 +51,6 @@ export const useSyncedTableInfo = (
 			ymetadata.set('rows', initialMetadataRef.current.rows);
 			ymetadata.set('cols', initialMetadataRef.current.cols);
 			ymetadata.set('title', initialMetadataRef.current.title || '');
-			ymetadata.set('description', initialMetadataRef.current.description || '');
 		}
 
 		if (ytableData.length === 0 && initialDataRef.current.length > 0) {
@@ -68,7 +67,6 @@ export const useSyncedTableInfo = (
 				rows: (ymetadata.get('rows') as number) || initialMetadataRef.current.rows,
 				cols: (ymetadata.get('cols') as number) || initialMetadataRef.current.cols,
 				title: (ymetadata.get('title') as string) || initialMetadataRef.current.title || '',
-				description: (ymetadata.get('description') as string) || initialMetadataRef.current.description || '',
 			};
 			setMetadata(newMetadata);
 		};
@@ -134,7 +132,6 @@ export const useSyncedTableInfo = (
 		ymetadata.set('rows', newMetadata.rows);
 		ymetadata.set('cols', newMetadata.cols);
 		ymetadata.set('title', newMetadata.title || '');
-		ymetadata.set('description', newMetadata.description || '');
 	};
 
 	// Update individual cell

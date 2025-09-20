@@ -32,7 +32,7 @@ export class PrismaTableStore implements TableStore {
 	}
 
 	async create(name: string): Promise<Table> {
-		const r = await this.prisma.table.create({ data: { name: name || 'Untitled Table' } });
+		const r = await this.prisma.table.create({ data: { name: name || 'Untitled Table' , rows: 3, cols: 3 } });
 		return { id: r.id, name: r.name, createdAt: r.createdAt.toISOString() };
 	}
 

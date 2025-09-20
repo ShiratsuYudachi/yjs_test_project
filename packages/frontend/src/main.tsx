@@ -11,8 +11,6 @@ import './index.css';
 const INITIAL_METADATA: TableMetadata = {
 	rows: 3,
 	cols: 3,
-	title: 'My Collaborative Table',
-	description: 'Click on any cell to edit. All cells are treated equally - no column headers needed.',
 };
 const TableView: React.FC = () => {
 	const { tableId } = useParams<{ tableId: string }>();
