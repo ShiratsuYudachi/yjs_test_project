@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
-import { TableMetadata } from '../components/CollaborativeTable';
+import { TableMetadata } from '../components/TableDisplay';
 
 interface UseCollaborativeTableReturn {
 	metadata: TableMetadata;
@@ -12,7 +12,7 @@ interface UseCollaborativeTableReturn {
 }
 
 export const useSyncedTableInfo = (
-	documentName: string = 'shared-table',
+	documentName: string,
 	initialMetadata: TableMetadata,
 	initialData: string[][] = []
 ): UseCollaborativeTableReturn => {
