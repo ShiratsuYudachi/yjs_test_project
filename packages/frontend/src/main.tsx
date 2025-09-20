@@ -2,10 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { MantineProvider, Container, Text, Modal, TextInput, Button, createTheme, Box } from '@mantine/core';
 import '@mantine/core/styles.css';
-import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
 import { TableDisplay } from './components/TableDisplay';
 import { useSyncedTableInfo } from './hooks/useSyncedTableInfo';
 import { TablesSidebar } from './components/TablesSidebar';
+import { PasswordView } from './components/PasswordView';
+import { TableAuthProvider, useTableAuth } from './contexts/TableAuthContext';
 import './index.css';
 
 // Nickname modal component
@@ -48,10 +50,33 @@ const NicknameModal: React.FC<{ onSubmit: (name: string) => void }> = ({ onSubmi
 	);
 };
 
-// no metadata needed anymore
 const TableView: React.FC = () => {
 	const { tableId } = useParams<{ tableId: string }>();
 	const [userName, setUserName] = useState<string | null>(null);
+	const { password, setStatus } = useTableAuth();
+
+	const handlePasswordError = () => {
+		setStatus('failed');
+	};
+
+	// Always call the hook
+	const {
+		tableData,
+		updateCell,
+		addRow,
+		addCol,
+		setEditingCell,
+		clearEditingCell,
+		editingMap,
+		isConnected,
+	} = useSyncedTableInfo(
+		tableId || '', 
+		[], 
+		userName || undefined, 
+		password || undefined, 
+		handlePasswordError
+	);
+
 
 	if (!tableId) {
 		return (
@@ -64,16 +89,6 @@ const TableView: React.FC = () => {
 		);
 	}
 
-	const {
-		tableData,
-		updateCell,
-		addRow,
-		addCol,
-		setEditingCell,
-		clearEditingCell,
-		editingMap,
-		isConnected,
-	} = useSyncedTableInfo(tableId, [], userName || undefined);
 
 	return (
 		<Box style={{ display: 'flex', height: '100vh' }}>
@@ -99,6 +114,48 @@ const TableView: React.FC = () => {
 	);
 };
 
+const PasswordInputView: React.FC = () => {
+	const { setPassword, setStatus, status } = useTableAuth();
+	const navigate = useNavigate();
+
+	const handlePasswordSubmit = (submittedPassword: string) => {
+		setPassword(submittedPassword);
+		setStatus('OK');
+	};
+
+	const handleCancel = () => {
+		navigate('/tables');
+	};
+
+	return (
+		<PasswordView 
+			onPasswordSubmit={handlePasswordSubmit}
+			error={status === 'failed' ? 'Invalid password. Please try again.' : ''}
+			onCancel={handleCancel}
+		/>
+	);
+};
+
+const TableContainer: React.FC = () => {
+	const { status, setPassword, setStatus } = useTableAuth();
+
+    const { tableId } = useParams<{ tableId: string }>();
+    useEffect(() => {
+        console.log("updating status")
+        if (tableId) {
+
+            setPassword(null);
+            setStatus('OK');
+        }
+    }, [tableId]);
+
+	if (status === 'failed') {
+		return <PasswordInputView />;
+	}
+
+	return <TableView />;
+};
+
 const theme = createTheme({
 	// Use Mantine's default theme
 });
@@ -107,11 +164,13 @@ const App = () => {
 	return (
 		<MantineProvider theme={theme}>
 			<BrowserRouter>
-				<Routes>
-					<Route path="/tables" element={<TableView />} />
-					<Route path="/tables/:tableId" element={<TableView />} />
-					<Route path="*" element={<Navigate to="/tables" replace />} />
-				</Routes>
+				<TableAuthProvider>
+					<Routes>
+						<Route path="/tables" element={<TableContainer />} />
+						<Route path="/tables/:tableId" element={<TableContainer />} />
+						<Route path="*" element={<Navigate to="/tables" replace />} />
+					</Routes>
+				</TableAuthProvider>
 			</BrowserRouter>
 		</MantineProvider>
 	);

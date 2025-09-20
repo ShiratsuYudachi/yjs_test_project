@@ -81,8 +81,48 @@ const server = app.listen(port, () => {
 // WebSocket server for Y.js
 const wss = new WebSocketServer({ port: wsPort });
 
-wss.on('connection', (ws, req) => {
-	setupWSConnection(ws, req);
+wss.on('connection', async (ws, req) => {
+	try {
+		// Parse the URL to get tableId and password
+		const url = new URL(req.url!, `ws://${req.headers.host}`);
+		const tableId = url.pathname.replace(/^\//, '').replace(/\/$/, ''); // Remove leading and trailing slashes
+		const providedPassword = url.searchParams.get('password')?.replace('/', '');
+		
+		console.log('WebSocket connection attempt:', {
+			url: req.url,
+			pathname: url.pathname,
+			tableId,
+			providedPassword: providedPassword ? '[REDACTED]' : null
+		});
+
+		// Check if table exists and validate password
+		const table = await prisma.table.findUnique({
+			where: { id: tableId },
+			select: { password: true }
+		});
+
+		if (!table) {
+			console.log("tableId", tableId);
+			console.log("closed - table not found")
+			ws.close(1000, 'Table not found');
+			return;
+		}
+
+		// If table has a password, verify it
+		if (table?.password && table?.password !== providedPassword) {
+			ws.close(1008, 'Invalid password');
+			console.log("closed - invalid password", table?.password, providedPassword)
+			return;
+		}
+		const cleanedReq = {
+			...req,
+			url: req.url?.replace(/\/$/, '') || req.url
+		};
+		setupWSConnection(ws, cleanedReq);
+	} catch (error) {
+		console.error('WebSocket connection error:', error);
+		ws.close(1011, 'Internal server error');
+	}
 });
 
 console.log(`Y.js WebSocket server running on ws://localhost:${wsPort}`);

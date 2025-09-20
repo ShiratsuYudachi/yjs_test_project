@@ -7,7 +7,7 @@ export type Table = {
 export interface TableStore {
 	list(): Promise<Table[]> | Table[];
 	get(id: string): Promise<Table | undefined> | Table | undefined;
-	create(name: string): Promise<Table> | Table;
+	create(name: string, rows: number, cols: number, password?: string): Promise<Table> | Table;
 	delete(id: string): Promise<boolean> | boolean;
 }
 
@@ -31,16 +31,17 @@ export class PrismaTableStore implements TableStore {
 		return r ? { id: r.id, name: r.name, createdAt: r.createdAt.toISOString() } : undefined;
 	}
 
-	async create(name: string): Promise<Table> {
-		const r = await this.prisma.table.create({ data: { name: name || 'Untitled Table' } });
-		// create default 3x3 empty grid by inserting empty cells
+	async create(name: string, rows: number, cols: number, password?: string): Promise<Table> {
+		const r = await this.prisma.table.create({ data: { name: name || 'Untitled Table', password } });
+	
 		const emptyCells = [] as { tableId: string; rowIndex: number; colIndex: number; value: string }[];
-		for (let row = 0; row < 3; row++) {
-			for (let col = 0; col < 3; col++) {
+		for (let row = 0; row < rows; row++) {
+			for (let col = 0; col < cols; col++) {
 				emptyCells.push({ tableId: r.id, rowIndex: row, colIndex: col, value: '' });
 			}
 		}
 		await this.prisma.tableCell.createMany({ data: emptyCells });
+		console.log("created table", r);
 		return { id: r.id, name: r.name, createdAt: r.createdAt.toISOString() };
 	}
 

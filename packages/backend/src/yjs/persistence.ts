@@ -20,6 +20,7 @@ export function createYjsPersistence(prisma: PrismaClient) {
 	};
 
 	const persistFullSnapshot = async (docName: string, ydoc: Y.Doc) => {
+		console.log('Persisting full snapshot for tableId:', docName);
 		const ytableData = ydoc.getArray<Y.Array<string>>('table-data');
 
         // can be optimized more.. but lazy now

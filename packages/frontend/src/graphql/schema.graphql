@@ -1,6 +1,7 @@
 type Table {
 	id: ID!
 	name: String!
+	hasPassword: Boolean!
 	createdAt: String!
 	cells: [TableCell!]!
 }
@@ -20,8 +21,9 @@ type Query {
 }
 
 type Mutation {
-	createTable(name: String!): Table!
+	createTable(name: String!, rows: Int, cols: Int, password: String): Table!
 	deleteTable(id: ID!): Boolean!
+	updateTablePassword(id: ID!, password: String): Boolean!
 	upsertCell(tableId: ID!, rowIndex: Int!, colIndex: Int!, value: String!): Boolean!
 }
 

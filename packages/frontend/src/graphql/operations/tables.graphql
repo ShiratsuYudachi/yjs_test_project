@@ -1,9 +1,13 @@
 query Tables {
-	tables { id name createdAt }
+	tables { id name hasPassword createdAt }
 }
 
-mutation CreateTable($name: String!) {
-	createTable(name: $name) { id name createdAt }
+query Table($id: ID!) {
+	table(id: $id) { id name hasPassword createdAt }
+}
+
+mutation CreateTable($name: String!, $password: String) {
+	createTable(name: $name, password: $password) { id name createdAt }
 }
 
 mutation DeleteTable($id: ID!) {

@@ -18,6 +18,8 @@ export const useSyncedTableInfo = (
 	documentName: string,
 	initialData: string[][] = [],
 	userName?: string,
+	password?: string,
+	onConnectionError?: () => void,
 ): UseCollaborativeTableReturn => {
 	const [tableData, setTableData] = useState<string[][]>(initialData);
 	const [isConnected, setIsConnected] = useState(false);
@@ -36,7 +38,14 @@ const selfClientIdRef = useRef<number | null>(null);
 	useEffect(() => {
 		// Create Y.js document and connect to WebSocket
 		const ydoc = new Y.Doc();
-		const provider = new WebsocketProvider('ws://localhost:1234', documentName, ydoc);
+		
+		// Build WebSocket URL with password if provided
+		let wsUrl = `ws://localhost:1234/${documentName}`;
+		if (password) {
+			wsUrl += `?password=${encodeURIComponent(password)}`;
+		}
+		
+		const provider = new WebsocketProvider(wsUrl, '', ydoc);
 		const ytableData = ydoc.getArray<Y.Array<string>>('table-data');
 
 		ydocRef.current = ydoc;
@@ -47,6 +56,13 @@ const selfClientIdRef = useRef<number | null>(null);
 		// Connection status
 		provider.on('status', (event: any) => {
 			setIsConnected(event.status === 'connected');
+		});
+
+		// Handle WebSocket errors (like wrong password)
+		provider.ws?.addEventListener('close', (event: CloseEvent) => {
+			if (event.code === 1008) {
+				onConnectionError?.();
+			}
 		});
 
         // no metadata init
@@ -125,7 +141,7 @@ const selfClientIdRef = useRef<number | null>(null);
 			provider.destroy();
 			ydoc.destroy();
 		};
-	}, [documentName, userName]); // deps include userName
+	}, [documentName, userName, password]);
 
 	// Expand table data if needed
 	const expandTableData = (targetRowIndex: number, targetColIndex: number) => {
@@ -199,6 +215,6 @@ const selfClientIdRef = useRef<number | null>(null);
 		setEditingCell,
 		clearEditingCell,
 		editingMap,
-		isConnected,
+		isConnected
 	};
 };

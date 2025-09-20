@@ -76,7 +76,7 @@ export const TableDisplay: React.FC<TableDisplayProps> = ({
 					<Text size="sm">Table Size: {rows} × {cols}</Text>
 					<Text size="sm">Data Size: {tableData.length} × {tableData[0]?.length || 0}</Text>
 					<Text size="sm">Total Cells: {rows * cols} (Data: {tableData.reduce((sum, row) => sum + row.length, 0)})</Text>
-					<Table size="xs" bg="white" mt="sm">
+					<Table bg="white" mt="sm">
 						<Table.Tbody>
 							{tableData.map((row, rowIndex) => (
 								<Table.Tr key={rowIndex}>

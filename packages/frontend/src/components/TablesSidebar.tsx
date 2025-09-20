@@ -2,10 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, ActionIcon, Text, Box, ScrollArea, Stack } from '@mantine/core';
 import { createTable, deleteTable, listTables, TableSummary } from '../service/tablesApi';
+import { CreateTableModal } from './CreateTableModal';
 
 export const TablesSidebar: React.FC = () => {
 	const [tables, setTables] = useState<TableSummary[]>([]);
 	const [loading, setLoading] = useState<boolean>(false);
+	const [createModalOpened, setCreateModalOpened] = useState(false);
+	const [creating, setCreating] = useState(false);
 	const navigate = useNavigate();
 
 	const fetchTables = async () => {
@@ -22,14 +25,17 @@ export const TablesSidebar: React.FC = () => {
 		fetchTables();
 	}, []);
 
-	const handleCreate = async () => {
-		const name = window.prompt('Enter table name') || '';
+	const handleCreate = async (name: string, password?: string) => {
+		setCreating(true);
 		try {
-			const t = await createTable(name.trim());
+			const t = await createTable(name, password);
 			await fetchTables();
+			setCreateModalOpened(false);
 			navigate(`/tables/${t.id}`);
 		} catch (e) {
 			console.error(e);
+		} finally {
+			setCreating(false);
 		}
 	};
 
@@ -47,7 +53,7 @@ export const TablesSidebar: React.FC = () => {
 		<Box w={256} h="100vh" style={{ borderRight: '1px solid var(--mantine-color-gray-3)', display: 'flex', flexDirection: 'column' }}>
 			<Box p="md" style={{ borderBottom: '1px solid var(--mantine-color-gray-3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
 				<Text fw={600}>Tables</Text>
-				<Button size="xs" onClick={handleCreate}>+</Button>
+				<Button size="xs" onClick={() => setCreateModalOpened(true)}>+</Button>
 			</Box>
 			<ScrollArea flex={1}>
 				{loading ? (
@@ -63,7 +69,7 @@ export const TablesSidebar: React.FC = () => {
 									size="sm" 
 									style={{ flex: 1, justifyContent: 'flex-start' }}
 								>
-									{t.name || 'Untitled Table'}
+									{t.hasPassword && '🔒 '}{t.name || 'Untitled Table'}
 								</Button>
 								<ActionIcon size="sm" variant="subtle" color="red" onClick={() => handleDelete(t.id)}>
 									×
@@ -73,6 +79,13 @@ export const TablesSidebar: React.FC = () => {
 					</Stack>
 				)}
 			</ScrollArea>
+			
+			<CreateTableModal
+				opened={createModalOpened}
+				onClose={() => setCreateModalOpened(false)}
+				onSubmit={handleCreate}
+				loading={creating}
+			/>
 		</Box>
 	);
 };

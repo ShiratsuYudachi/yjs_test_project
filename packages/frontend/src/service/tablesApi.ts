@@ -4,6 +4,7 @@ import { getSdk } from '../graphql/types';
 export type TableSummary = {
 	id: string;
 	name: string;
+	hasPassword: boolean;
 	createdAt: string;
 };
 
@@ -16,8 +17,8 @@ export async function listTables(): Promise<TableSummary[]> {
 	return data.tables;
 }
 
-export async function createTable(name: string): Promise<TableSummary> {
-	const data = await sdk.CreateTable({ name });
+export async function createTable(name: string, password?: string): Promise<TableSummary> {
+	const data = await sdk.CreateTable({ name, password });
 	return data.createTable;
 }
 
