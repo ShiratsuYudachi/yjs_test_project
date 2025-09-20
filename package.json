@@ -1,0 +1,18 @@
+{
+	"name": "yjs_test_project",
+	"private": true,
+	"version": "0.1.0",
+	"workspaces": [
+		"packages/*"
+	],
+	"scripts": {
+		"dev:backend": "npm run start -w @app/backend",
+		"dev:frontend": "npm run dev -w @app/frontend",
+		"dev": "concurrently -k -n backend,frontend -c blue,green \"npm:dev:backend\" \"npm:dev:frontend\""
+	},
+	"devDependencies": {
+		"concurrently": "^9.0.0"
+	}
+}
+
+
