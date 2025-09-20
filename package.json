@@ -6,13 +6,16 @@
 		"packages/*"
 	],
 	"scripts": {
-		"dev:backend": "npm run start -w @app/backend",
+		"dev:backend": "npm run dev -w @app/backend",
 		"dev:frontend": "npm run dev -w @app/frontend",
-		"dev": "concurrently -k -n backend,frontend -c blue,green \"npm:dev:backend\" \"npm:dev:frontend\""
+		"dev": "concurrently -k -n backend,frontend -c blue,green \"npm:dev:backend\" \"npm:dev:frontend\"",
+		"gen:graphql": "npm run -w @app/backend codegen && npm run -w @app/frontend codegen",
+		"gen:prisma": "npm run -w @app/backend prisma:gen && npm run -w @app/backend prisma:push"
 	},
 	"devDependencies": {
+		"@graphql-codegen/cli": "^6.0.0",
+		"@graphql-codegen/typescript": "^5.0.0",
+		"@graphql-codegen/typescript-resolvers": "^5.0.0",
 		"concurrently": "^9.0.0"
 	}
 }
-
-

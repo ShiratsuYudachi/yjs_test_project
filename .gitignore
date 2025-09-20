@@ -16,4 +16,7 @@ dist/
 # Prisma debug logs
 prisma/*.log
 
+# GrphQL
+packages/backend/src/graphql/types.ts
+packages/frontend/src/graphql/types.ts
 

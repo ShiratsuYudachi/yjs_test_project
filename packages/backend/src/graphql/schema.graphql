@@ -1,0 +1,28 @@
+type Table {
+	id: ID!
+	name: String!
+	createdAt: String!
+	cells: [TableCell!]!
+}
+
+type TableCell {
+	id: ID!
+	rowIndex: Int!
+	colIndex: Int!
+	value: String!
+	updatedAt: String!
+}
+
+type Query {
+	tables: [Table!]!
+	table(id: ID!): Table
+	cells(tableId: ID!): [TableCell!]!
+}
+
+type Mutation {
+	createTable(name: String!): Table!
+	deleteTable(id: ID!): Boolean!
+	upsertCell(tableId: ID!, rowIndex: Int!, colIndex: Int!, value: String!): Boolean!
+}
+
+

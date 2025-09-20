@@ -6,8 +6,11 @@ import { WebSocketServer } from 'ws';
 // @ts-ignore
 import { setupWSConnection } from 'y-websocket/bin/utils';
 import {PrismaTableStore } from './store/tables';
-import { createTablesRouter } from './routes/tables';
-import { createCellsRouter } from './routes/cells';
+import { ApolloServer } from '@apollo/server';
+import { koaMiddleware } from '@as-integrations/koa';
+import { resolvers } from './graphql/resolvers';
+import fs from 'fs';
+import path from 'path';
 import { PrismaClient } from '@prisma/client';
 
 const app = new Koa();
@@ -44,17 +47,28 @@ app.use(async (ctx, next) => {
 	console.log("[INFO] ", `${ctx.method} ${ctx.url} -> ${ctx.status} ${ms}ms`);
 });
 
-// Routes - Tables API
-const tablesRouter = createTablesRouter(tableStore);
-router.use(tablesRouter.routes(), tablesRouter.allowedMethods());
-
-// Cells API
-const cellsRouter = createCellsRouter(prisma);
-router.use(cellsRouter.routes(), cellsRouter.allowedMethods());
+// (REST removed) We now use GraphQL only
 
 // Attach router
 app.use(router.routes());
 app.use(router.allowedMethods());
+
+// GraphQL (/graphql)
+function loadTypeDefs(): string {
+	const distPath = path.resolve(__dirname, 'graphql', 'schema.graphql');
+	const srcPath = path.resolve(__dirname, '../src/graphql/schema.graphql');
+	if (fs.existsSync(distPath)) return fs.readFileSync(distPath, 'utf8');
+	if (fs.existsSync(srcPath)) return fs.readFileSync(srcPath, 'utf8');
+	throw new Error('schema.graphql not found in dist or src');
+}
+
+const apollo = new ApolloServer({ typeDefs: loadTypeDefs(), resolvers });
+(async () => {
+	await apollo.start();
+	app.use(koaMiddleware(apollo, {
+		context: async () => ({ prisma, tableStore })
+	}));
+})();
 
 const server = app.listen(port, () => {
 	console.log(`HTTP server running on http://localhost:${port}`);
