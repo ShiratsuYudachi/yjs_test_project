@@ -8,20 +8,26 @@ interface UseCollaborativeTableReturn {
 	updateCell: (rowIndex: number, colIndex: number, value: string) => void;
 	addRow: () => void;
 	addCol: () => void;
+	setEditingCell: (rowIndex: number, colIndex: number) => void;
+	clearEditingCell: () => void;
+	editingMap: Record<string, string[]>;
 	isConnected: boolean;
 }
 
 export const useSyncedTableInfo = (
 	documentName: string,
-	initialData: string[][] = []
+	initialData: string[][] = [],
+	userName?: string,
 ): UseCollaborativeTableReturn => {
 	const [tableData, setTableData] = useState<string[][]>(initialData);
 	const [isConnected, setIsConnected] = useState(false);
+    const [editingMap, setEditingMap] = useState<Record<string, string[]>>({});
 
 	const ydocRef = useRef<Y.Doc | null>(null);
 	const providerRef = useRef<WebsocketProvider | null>(null);
 // no metadata now
-	const ytableDataRef = useRef<Y.Array<Y.Array<string>> | null>(null);
+const ytableDataRef = useRef<Y.Array<Y.Array<string>> | null>(null);
+const selfClientIdRef = useRef<number | null>(null);
 	
 	// Store initial values in refs to avoid dependency issues
 // removed
@@ -36,6 +42,7 @@ export const useSyncedTableInfo = (
 		ydocRef.current = ydoc;
 		providerRef.current = provider;
 		ytableDataRef.current = ytableData;
+		selfClientIdRef.current = provider.awareness.clientID;
 
 		// Connection status
 		provider.on('status', (event: any) => {
@@ -73,17 +80,52 @@ export const useSyncedTableInfo = (
 		
 		ytableData.observeDeep(updateTableData);
 
+		// Awareness: set local nickname and track others' editing
+		const setLocalUser = () => {
+			const desired = (userName && userName.trim()) ? userName.trim() : 'Anonymous';
+			const states = Array.from(provider.awareness.getStates().values());
+			const used = new Set<string>();
+			states.forEach(s => { if (s?.user?.name) used.add(String(s.user.name)); });
+			let finalName = desired;
+			let i = 2;
+			while (used.has(finalName)) finalName = `${desired}-${i++}`;
+			provider.awareness.setLocalStateField('user', { name: finalName });
+		};
+
+		const recomputeEditing = () => {
+			const map: Record<string, string[]> = {};
+			const selfId = selfClientIdRef.current;
+			provider.awareness.getStates().forEach((state: any, cid: number) => {
+				if (cid === selfId) return;
+				const name = state?.user?.name as string | undefined;
+				const editing = state?.editing as { rowIndex: number; colIndex: number } | undefined;
+				if (!name || !editing) return;
+				const key = `${editing.rowIndex}:${editing.colIndex}`;
+				if (!map[key]) map[key] = [];
+				map[key].push(name);
+			});
+			setEditingMap(map);
+		};
+
+		const onAwarenessChange = () => {
+			recomputeEditing();
+		};
+		provider.awareness.on('change', onAwarenessChange);
+
 		// Initial sync
 		updateTableData();
+		setLocalUser();
+		recomputeEditing();
 
 		// Cleanup
 		return () => {
 			ytableData.unobserve(updateTableData);
 			ytableData.unobserveDeep(updateTableData);
+			provider.awareness.off('change', onAwarenessChange);
 			provider.destroy();
 			ydoc.destroy();
 		};
-	}, [documentName]); // Only documentName as dependency
+	}, [documentName, userName]); // deps include userName
 
 	// Expand table data if needed
 	const expandTableData = (targetRowIndex: number, targetColIndex: number) => {
@@ -139,11 +181,24 @@ export const useSyncedTableInfo = (
 		});
 	};
 
+	const setEditingCell = (rowIndex: number, colIndex: number) => {
+		if (!providerRef.current) return;
+		providerRef.current.awareness.setLocalStateField('editing', { rowIndex, colIndex });
+	};
+
+	const clearEditingCell = () => {
+		if (!providerRef.current) return;
+		providerRef.current.awareness.setLocalStateField('editing', null as any);
+	};
+
 	return {
 		tableData,
 		updateCell,
 		addRow,
 		addCol,
+		setEditingCell,
+		clearEditingCell,
+		editingMap,
 		isConnected,
 	};
 };

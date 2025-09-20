@@ -7,6 +7,9 @@ interface TableDisplayProps {
 	onCellChange: (rowIndex: number, colIndex: number, value: string) => void;
 	onAddRow: () => void;
 	onAddCol: () => void;
+	setEditingCell: (rowIndex: number, colIndex: number) => void;
+	clearEditingCell: () => void;
+	editingMap: Record<string, string[]>;
 }
 
 export const TableDisplay: React.FC<TableDisplayProps> = ({
@@ -14,6 +17,9 @@ export const TableDisplay: React.FC<TableDisplayProps> = ({
 	onCellChange,
 	onAddRow,
 	onAddCol,
+	setEditingCell,
+	clearEditingCell,
+	editingMap,
 }) => {
 	const rows = tableData.length;
 	const cols = tableData.reduce((m, r) => Math.max(m, r.length), 0);
@@ -42,16 +48,23 @@ export const TableDisplay: React.FC<TableDisplayProps> = ({
 							className={`table-row grid border-b border-gray-300 last:border-b-0`}
 							style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
 						>
-							{Array.from({ length: cols }, (_, colIndex) => (
-								<div key={`${rowIndex}-${colIndex}`} className="border-r border-gray-300 last:border-r-0">
-									<EditableCell
-										value={getCellValue(rowIndex, colIndex)}
-										rowIndex={rowIndex}
-										colIndex={colIndex}
-										onValueChange={onCellChange}
-									/>
-								</div>
-							))}
+							{Array.from({ length: cols }, (_, colIndex) => {
+								const cellKey = `${rowIndex}:${colIndex}`;
+								const editingUsers = editingMap[cellKey] || [];
+								return (
+									<div key={`${rowIndex}-${colIndex}`} className="border-r border-gray-300 last:border-r-0">
+										<EditableCell
+											value={getCellValue(rowIndex, colIndex)}
+											rowIndex={rowIndex}
+											colIndex={colIndex}
+											onValueChange={onCellChange}
+											onFocus={setEditingCell}
+											onBlur={clearEditingCell}
+											editingUsers={editingUsers}
+										/>
+									</div>
+								);
+							})}
 						</div>
 					))}
 				</div>
