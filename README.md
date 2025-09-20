@@ -1,5 +1,6 @@
 ## 整体概述
 使用Y.js通过websocket处理状态同步，React写的前端，GraphQL定义API，Prisma操作数据库
+
 端口：3001 (后端HTTP)、1234 (WebSocket)、5173 (前端) 
 
 ## 项目结构
@@ -9,7 +10,7 @@ yjs_test_project/
 │   ├── backend/                   # 后端应用
 │   │   ├── src/                   
 │   │   │   ├── graphql/           
-│   │   │   ├── store/             # 数据持久化bufen
+│   │   │   ├── store/             # 表格内容存储
 │   │   │   └── yjs/               # Y.js 集成
 │   │   └── prisma/                # 数据库相关
 |   |
