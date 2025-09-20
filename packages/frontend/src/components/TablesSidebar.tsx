@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Button, ActionIcon, Text, Box, ScrollArea, Stack } from '@mantine/core';
 import { createTable, deleteTable, listTables, TableSummary } from '../service/tablesApi';
 
 export const TablesSidebar: React.FC = () => {
@@ -43,28 +44,36 @@ export const TablesSidebar: React.FC = () => {
 	};
 
 	return (
-		<div className="w-64 border-r h-full flex flex-col">
-			<div className="p-3 flex items-center justify-between border-b">
-				<div className="font-semibold">Tables</div>
-				<button onClick={handleCreate} className="px-2 py-1 bg-blue-600 text-white rounded">+</button>
-			</div>
-			<div className="flex-1 overflow-auto">
+		<Box w={256} h="100vh" style={{ borderRight: '1px solid var(--mantine-color-gray-3)', display: 'flex', flexDirection: 'column' }}>
+			<Box p="md" style={{ borderBottom: '1px solid var(--mantine-color-gray-3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+				<Text fw={600}>Tables</Text>
+				<Button size="xs" onClick={handleCreate}>+</Button>
+			</Box>
+			<ScrollArea flex={1}>
 				{loading ? (
-					<div className="p-3 text-sm text-gray-500">Loading...</div>
+					<Text size="sm" c="dimmed" p="md">Loading...</Text>
 				) : (
-					<ul>
+					<Stack gap="xs" p="sm">
 						{tables.map(t => (
-							<li key={t.id} className="flex items-center justify-between px-3 py-2 hover:bg-gray-50">
-								<Link to={`/tables/${t.id}`} className="text-blue-700 underline">
+							<Box key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+								<Button 
+									component={Link} 
+									to={`/tables/${t.id}`} 
+									variant="subtle" 
+									size="sm" 
+									style={{ flex: 1, justifyContent: 'flex-start' }}
+								>
 									{t.name || 'Untitled Table'}
-								</Link>
-								<button onClick={() => handleDelete(t.id)} className="text-red-600 text-sm">Delete</button>
-							</li>
+								</Button>
+								<ActionIcon size="sm" variant="subtle" color="red" onClick={() => handleDelete(t.id)}>
+									×
+								</ActionIcon>
+							</Box>
 						))}
-					</ul>
+					</Stack>
 				)}
-			</div>
-		</div>
+			</ScrollArea>
+		</Box>
 	);
 };
 

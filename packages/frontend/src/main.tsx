@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import { MantineProvider, Container, Text, Modal, TextInput, Button } from '@mantine/core';
+import { MantineProvider, Container, Text, Modal, TextInput, Button, createTheme, Box } from '@mantine/core';
+import '@mantine/core/styles.css';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { TableDisplay } from './components/TableDisplay';
 import { useSyncedTableInfo } from './hooks/useSyncedTableInfo';
@@ -21,18 +22,27 @@ const NicknameModal: React.FC<{ onSubmit: (name: string) => void }> = ({ onSubmi
 	};
 
 	return (
-		<Modal opened={opened} onClose={() => {}} withCloseButton={false} closeOnClickOutside={false} closeOnEscape={false}>
-			<Text size="lg" className="mb-4">Enter your nickname</Text>
+		<Modal 
+			opened={opened} 
+			onClose={() => {}} 
+			withCloseButton={false} 
+			closeOnClickOutside={false} 
+			closeOnEscape={false}
+			zIndex={1000}
+			overlayProps={{ opacity: 0.7, blur: 3 }}
+			centered
+		>
+			<Text size="lg" mb="md">Enter your nickname</Text>
 			<TextInput
 				placeholder="Your nickname..."
 				value={nickname}
 				onChange={(e) => setNickname(e.target.value)}
 				onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-				className="mb-4"
+				mb="md"
 				autoFocus
 			/>
-			<Button onClick={handleSubmit} disabled={!nickname.trim()}>
-				Join
+			<Button onClick={handleSubmit} disabled={!nickname.trim()} fullWidth>
+				Join Collaboration
 			</Button>
 		</Modal>
 	);
@@ -45,12 +55,12 @@ const TableView: React.FC = () => {
 
 	if (!tableId) {
 		return (
-			<div className="flex h-screen">
+			<Box style={{ display: 'flex', height: '100vh' }}>
 				<TablesSidebar />
-				<div className="flex-1 p-6 overflow-auto">
-					<Text size="sm" className="mb-4 text-blue-600">Select or create a table from the sidebar.</Text>
-				</div>
-			</div>
+				<Box flex={1} p="xl" style={{ overflow: 'auto' }}>
+					<Text size="sm" c="blue">Select or create a table from the sidebar.</Text>
+				</Box>
+			</Box>
 		);
 	}
 
@@ -66,11 +76,11 @@ const TableView: React.FC = () => {
 	} = useSyncedTableInfo(tableId, [], userName || undefined);
 
 	return (
-		<div className="flex h-screen">
+		<Box style={{ display: 'flex', height: '100vh' }}>
 			<TablesSidebar />
-			<div className="flex-1 p-6 overflow-auto">
+			<Box flex={1} p="xl" style={{ overflow: 'auto' }}>
 				{!userName && <NicknameModal onSubmit={setUserName} />}
-				<Text size="sm" className="mb-4 text-blue-600">
+				<Text size="sm" c="blue" mb="md">
 					🔄 Y.js Collaborative Table - Open multiple tabs to see real-time collaboration!
 					{isConnected ? ' ✅ Connected' : ' ❌ Disconnected'}
 					{userName && ` | Hello, ${userName}!`}
@@ -84,14 +94,18 @@ const TableView: React.FC = () => {
 					clearEditingCell={clearEditingCell}
 					editingMap={editingMap}
 				/>
-			</div>
-		</div>
+			</Box>
+		</Box>
 	);
 };
 
+const theme = createTheme({
+	// Use Mantine's default theme
+});
+
 const App = () => {
 	return (
-		<MantineProvider>
+		<MantineProvider theme={theme}>
 			<BrowserRouter>
 				<Routes>
 					<Route path="/tables" element={<TableView />} />
