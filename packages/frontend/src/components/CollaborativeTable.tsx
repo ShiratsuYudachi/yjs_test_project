@@ -12,31 +12,32 @@ export interface TableMetadata {
 interface CollaborativeTableProps {
 	metadata: TableMetadata;
 	tableData: string[][];
-	onDataChange: (newData: string[][]) => void;
 	onMetadataChange: (newMetadata: TableMetadata) => void;
+	onCellChange: (rowIndex: number, colIndex: number, value: string) => void;
 }
 
 export const CollaborativeTable: React.FC<CollaborativeTableProps> = ({
 	metadata,
 	tableData,
-	onDataChange,
 	onMetadataChange,
+	onCellChange,
 }) => {
-	const handleValueChange = (rowIndex: number, colIndex: number, value: string) => {
-		const newData = tableData.map((row, rIndex) => 
-			rIndex === rowIndex 
-				? row.map((cell, cIndex) => cIndex === colIndex ? value : cell)
-				: row
-		);
-		onDataChange(newData);
+	const getCellValue = (rowIndex: number, colIndex: number): string => {
+		// Return cell value if it exists in tableData, otherwise empty string
+		if (rowIndex < tableData.length && colIndex < tableData[rowIndex].length) {
+			return tableData[rowIndex][colIndex];
+		}
+		return '';
 	};
 
+
 	const addNewRow = () => {
-		const newRow = new Array(metadata.cols).fill('');
-		const newData = [...tableData, newRow];
 		const newMetadata = { ...metadata, rows: metadata.rows + 1 };
-		
-		onDataChange(newData);
+		onMetadataChange(newMetadata);
+	};
+
+	const addNewCol = () => {
+		const newMetadata = { ...metadata, cols: metadata.cols + 1 };
 		onMetadataChange(newMetadata);
 	};
 
@@ -50,27 +51,28 @@ export const CollaborativeTable: React.FC<CollaborativeTableProps> = ({
 				<p className="text-gray-600 mb-4">
 					{metadata.description}
 				</p>
-				<Button onClick={addNewRow} className="mb-4">
-					Add New Row
-				</Button>
+				<div className="flex gap-2 mb-4">
+					<Button onClick={addNewRow}>Add New Row</Button>
+					<Button onClick={addNewCol} variant="outline">Add New Column</Button>
+				</div>
 			</div>
 
 			<div className="table-container border border-gray-300 rounded-lg overflow-hidden">
-				{/* Table Body */}
+				{/* Table Body - Generate based on metadata size */}
 				<div className="table-body">
-					{tableData.map((row, rowIndex) => (
+					{Array.from({ length: metadata.rows }, (_, rowIndex) => (
 						<div 
 							key={rowIndex} 
 							className={`table-row grid border-b border-gray-300 last:border-b-0`}
 							style={{ gridTemplateColumns: `repeat(${metadata.cols}, 1fr)` }}
 						>
-							{row.map((cellValue, colIndex) => (
+							{Array.from({ length: metadata.cols }, (_, colIndex) => (
 								<div key={`${rowIndex}-${colIndex}`} className="border-r border-gray-300 last:border-r-0">
 									<EditableCell
-										value={cellValue}
+										value={getCellValue(rowIndex, colIndex)}
 										rowIndex={rowIndex}
 										colIndex={colIndex}
-										onValueChange={handleValueChange}
+										onValueChange={onCellChange}
 									/>
 								</div>
 							))}
@@ -82,9 +84,20 @@ export const CollaborativeTable: React.FC<CollaborativeTableProps> = ({
 			{/* Debug Info */}
 			<div className="mt-6 p-4 bg-gray-100 rounded-lg">
 				<h4 className="font-semibold mb-2">Debug Info:</h4>
-				<p className="text-sm">Rows: {metadata.rows} (Actual: {tableData.length})</p>
-				<p className="text-sm">Cols: {metadata.cols}</p>
-				<p className="text-sm">Total Cells: {metadata.rows * metadata.cols}</p>
+				<p className="text-sm">Table Size: {metadata.rows} × {metadata.cols}</p>
+				<p className="text-sm">Data Size: {tableData.length} × {tableData[0]?.length || 0}</p>
+				<p className="text-sm">Total Cells: {metadata.rows * metadata.cols} (Data: {tableData.reduce((sum, row) => sum + row.length, 0)})</p>
+			<table className="text-xs bg-white p-2 rounded border mt-2 overflow-x-auto">
+				<tbody>
+					{tableData.map((row, rowIndex) => (
+						<tr key={rowIndex}>
+							{row.map((cell, colIndex) => (
+								<td key={colIndex} className="border px-2 py-1">{cell}</td>
+							))}
+						</tr>
+					))}
+				</tbody>
+			</table>
 			</div>
 		</Container>
 	);

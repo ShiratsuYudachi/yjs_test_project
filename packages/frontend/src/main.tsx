@@ -6,81 +6,6 @@ import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import './index.css';
 
-const CollaborativeEditor = () => {
-	const textareaRef = useRef<HTMLTextAreaElement>(null);
-	const ydocRef = useRef<Y.Doc | null>(null);
-	const providerRef = useRef<WebsocketProvider | null>(null);
-	const ytextRef = useRef<Y.Text | null>(null);
-
-	useEffect(() => {
-		if (!textareaRef.current) return;
-
-		// Create Y.js document and connect to WebSocket
-		const ydoc = new Y.Doc();
-		const provider = new WebsocketProvider('ws://localhost:1234', 'shared-document', ydoc);
-		const ytext = ydoc.getText('shared-text');
-
-		ydocRef.current = ydoc;
-		providerRef.current = provider;
-		ytextRef.current = ytext;
-
-		const textarea = textareaRef.current;
-
-		// Update textarea when Y.js text changes
-		const updateTextarea = () => {
-			const currentValue = ytext.toString();
-			if (textarea.value !== currentValue) {
-				const cursorPos = textarea.selectionStart;
-				textarea.value = currentValue;
-				textarea.setSelectionRange(cursorPos, cursorPos);
-			}
-		};
-
-		// Listen for Y.js changes
-		ytext.observe(updateTextarea);
-
-		// Handle textarea input
-		const handleInput = (e: Event) => {
-			const target = e.target as HTMLTextAreaElement;
-			const value = target.value;
-			const currentYText = ytext.toString();
-
-			if (value !== currentYText) {
-				ytext.delete(0, ytext.length);
-				ytext.insert(0, value);
-			}
-		};
-
-		textarea.addEventListener('input', handleInput);
-
-		// Initial sync
-		updateTextarea();
-
-		// Cleanup
-		return () => {
-			textarea.removeEventListener('input', handleInput);
-			ytext.unobserve(updateTextarea);
-			provider.destroy();
-			ydoc.destroy();
-		};
-	}, []);
-
-	return (
-		<div className="w-full max-w-4xl mx-auto mb-8">
-			<Title order={2} className="mb-4">Collaborative Text Editor</Title>
-			<Text size="sm" className="mb-4 text-gray-600">
-				Open this page in multiple tabs or browsers to see real-time collaboration!
-			</Text>
-			<Textarea
-				ref={textareaRef}
-				placeholder="Start typing... changes will sync across all connected clients"
-				minRows={10}
-				className="w-full"
-			/>
-		</div>
-	);
-};
-
 const TableDemo = () => {
 	const [metadata, setMetadata] = useState<TableMetadata>({
 		rows: 3,
@@ -89,28 +14,127 @@ const TableDemo = () => {
 		description: 'Click on any cell to edit. All cells are treated equally - no column headers needed.',
 	});
 
-	const [tableData, setTableData] = useState<string[][]>([
-		['John Doe', 'john@example.com', '25'],
-		['Jane Smith', 'jane@example.com', '30'],
-		['Bob Johnson', 'bob@example.com', '35'],
-	]);
+	const [tableData, setTableData] = useState<string[][]>([[]]);
 
-	const handleDataChange = (newData: string[][]) => {
-		setTableData(newData);
+	const ydocRef = useRef<Y.Doc | null>(null);
+	const providerRef = useRef<WebsocketProvider | null>(null);
+	const ymetadataRef = useRef<Y.Map<any> | null>(null);
+	const ytableDataRef = useRef<Y.Array<any> | null>(null);
+
+	useEffect(() => {
+		// Create Y.js document and connect to WebSocket
+		const ydoc = new Y.Doc();
+		const provider = new WebsocketProvider('ws://localhost:1234', 'shared-table', ydoc);
+		const ymetadata = ydoc.getMap('table-metadata');
+		const ytableData = ydoc.getArray('table-data');
+
+		ydocRef.current = ydoc;
+		providerRef.current = provider;
+		ymetadataRef.current = ymetadata;
+		ytableDataRef.current = ytableData;
+
+		// Initialize Y.js data if empty
+		if (ymetadata.size === 0) {
+			ymetadata.set('rows', 3);
+			ymetadata.set('cols', 3);
+			ymetadata.set('title', 'My Collaborative Table');
+			ymetadata.set('description', 'Click on any cell to edit. All cells are treated equally - no column headers needed.');
+		}
+
+		// Update local state when Y.js metadata changes
+		const updateMetadata = () => {
+			const newMetadata: TableMetadata = {
+				rows: (ymetadata.get('rows') as number) || 3,
+				cols: (ymetadata.get('cols') as number) || 3,
+				title: (ymetadata.get('title') as string) || 'My Collaborative Table',
+				description: (ymetadata.get('description') as string) || 'Click on any cell to edit.',
+			};
+			setMetadata(newMetadata);
+		};
+
+		// Update local state when Y.js table data changes
+		const updateTableData = () => {
+			const newData: string[][] = [];
+			ytableData.forEach((yrow: any) => {
+				const row: string[] = [];
+				yrow.forEach((cell: string) => {
+					row.push(cell);
+				});
+				newData.push(row);
+			});
+			setTableData(newData);
+		};
+
+		// Listen for Y.js changes
+		ymetadata.observe(updateMetadata);
+		ytableData.observe(updateTableData);
+
+		// Initial sync
+		updateMetadata();
+		updateTableData();
+
+		// Cleanup
+		return () => {
+			ymetadata.unobserve(updateMetadata);
+			ytableData.unobserve(updateTableData);
+			provider.destroy();
+			ydoc.destroy();
+		};
+	}, []);
+
+	const expandTableData = (targetRowIndex: number, targetColIndex: number) => {
+		if (!ytableDataRef.current) return;
+
+		const ytableData = ytableDataRef.current;
+		
+		// Expand rows if needed
+		while (ytableData.length <= targetRowIndex) {
+			const yrow = new Y.Array();
+			ytableData.push([yrow]);
+		}
+		
+		// Expand columns in the target row if needed
+		const targetRow = ytableData.get(targetRowIndex) as Y.Array<string>;
+		while (targetRow.length <= targetColIndex) {
+			targetRow.push(['']);
+		}
 	};
 
 	const handleMetadataChange = (newMetadata: TableMetadata) => {
-		setMetadata(newMetadata);
-		console.log('Table metadata changed:', newMetadata);
+		if (!ymetadataRef.current) return;
+
+		const ymetadata = ymetadataRef.current;
+		ymetadata.set('rows', newMetadata.rows);
+		ymetadata.set('cols', newMetadata.cols);
+		ymetadata.set('title', newMetadata.title || '');
+		ymetadata.set('description', newMetadata.description || '');
+	};
+
+	const handleCellChange = (rowIndex: number, colIndex: number, value: string) => {
+		if (!ytableDataRef.current) return;
+
+		// First, expand tableData if the cell is out of range
+		expandTableData(rowIndex, colIndex);
+		
+		// Now update the cell value
+		const ytableData = ytableDataRef.current;
+		const yrow = ytableData.get(rowIndex) as Y.Array<string>;
+		yrow.delete(colIndex, 1);
+		yrow.insert(colIndex, [value]);
 	};
 
 	return (
-		<CollaborativeTable 
-			metadata={metadata}
-			tableData={tableData}
-			onDataChange={handleDataChange}
-			onMetadataChange={handleMetadataChange}
-		/>
+		<div>
+			<Text size="sm" className="mb-4 text-blue-600">
+				🔄 Y.js Collaborative Table - Open multiple tabs to see real-time collaboration!
+			</Text>
+			<CollaborativeTable 
+				metadata={metadata}
+				tableData={tableData}
+				onMetadataChange={handleMetadataChange}
+				onCellChange={handleCellChange}
+			/>
+		</div>
 	);
 };
 
@@ -118,8 +142,6 @@ const App = () => {
 	return (
 		<MantineProvider>
 			<Container className="min-h-screen py-8">
-				<CollaborativeEditor />
-				<Divider className="my-8" />
 				<TableDemo />
 			</Container>
 		</MantineProvider>
