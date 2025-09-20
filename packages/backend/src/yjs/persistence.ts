@@ -1,5 +1,6 @@
 import * as Y from 'yjs';
 import { PrismaClient } from '@prisma/client';
+import { printType } from 'graphql';
 
 type DebounceHandle = ReturnType<typeof setTimeout> | null;
 
@@ -20,43 +21,46 @@ export function createYjsPersistence(prisma: PrismaClient) {
 
 	const persistFullSnapshot = async (docName: string, ydoc: Y.Doc) => {
 		const ytableData = ydoc.getArray<Y.Array<string>>('table-data');
-		const ymetadata = ydoc.getMap('table-metadata');
-		const newCells: { tableId: string; rowIndex: number; colIndex: number; value: string }[] = [];
 
-		// compute rows/cols from current doc for robustness
-		const rowsCount = ytableData.length;
-		let maxCols = 0;
-		ytableData.forEach((yrow) => { if (yrow.length > maxCols) maxCols = yrow.length; });
-
-		ytableData.forEach((yrow, rowIndex) => {
-			for (let colIndex = 0; colIndex < yrow.length; colIndex++) {
-				const value = yrow.get(colIndex) as unknown as string;
-				if (value && value.length > 0) {
-					newCells.push({ tableId: docName, rowIndex, colIndex, value });
-				}
-			}
-		});
-		const newTableEntry = {
-			rows: (ymetadata.get('rows') as number) ?? rowsCount,
-			cols: (ymetadata.get('cols') as number) ?? maxCols,
-		};
-
-		const ops: any[] = [
-			prisma.tableCell.deleteMany({ where: { tableId: docName } }),
-			prisma.table.update({
-				where: { id: docName },
-				data: newTableEntry,
-			}),
-		];
-		if (newCells.length) {
-			ops.push(prisma.tableCell.createMany({ data: newCells }));
-		}
+        // can be optimized more.. but lazy now
+		const cells = yTableDataToArray(ytableData);
+        const ops: any[] = [];
+        for (let rowIndex = 0; rowIndex < cells.length; rowIndex++) {
+            for (let colIndex = 0; colIndex < cells[rowIndex].length; colIndex++) {
+                const value = cells[rowIndex][colIndex];
+                ops.push(prisma.tableCell.upsert({
+                    where: { tableId_rowIndex_colIndex: { tableId: docName, rowIndex, colIndex } },
+                    update: { value },
+                    create: { tableId: docName, rowIndex, colIndex, value },
+                }));
+            }
+        }
+		printytableData('[yjs][persist] saving table-data:', ytableData);
 		await prisma.$transaction(ops);
 	};
 
+    const yTableDataToArray = (ytableData: Y.Array<Y.Array<string>>) => {
+        const array: string[][] = [];
+		ytableData.forEach((yrow: Y.Array<string>) => {
+			const row: string[] = [];
+			yrow.forEach((cell: string) => row.push(cell));
+			array.push(row);
+		});
+        return array;
+    }
+
+    const printytableData = (str: string, ytableData: Y.Array<Y.Array<string>>) => {
+        const debugArray: string[][] = [];
+		ytableData.forEach((yrow: Y.Array<string>) => {
+			const row: string[] = [];
+			yrow.forEach((cell: string) => row.push(cell));
+			debugArray.push(row);
+		});
+        console.log(str, debugArray);
+    };
+
 	const hydrateIfEmpty = async (docName: string, ydoc: Y.Doc) => {
 		const ytableData = ydoc.getArray<Y.Array<string>>('table-data');
-		const ymetadata = ydoc.getMap('table-metadata')
 		if (ytableData.length > 0) return;
 
 		const tableEntry = await prisma.table.findUnique({ where: { id: docName } });
@@ -73,15 +77,10 @@ export function createYjsPersistence(prisma: PrismaClient) {
 		}
 		const rowsFromCells = cells.length ? maxRow + 1 : 0;
 		const colsFromCells = cells.length ? maxCol + 1 : 0;
-		const rows = Math.max(tableEntry?.rows || 0, rowsFromCells);
-		const cols = Math.max(tableEntry?.cols || 0, colsFromCells);
+		const rows = rowsFromCells;
+		const cols = colsFromCells;
 
 		Y.transact(ydoc, () => {
-			// set metadata
-			ymetadata.set('rows', rows);
-			ymetadata.set('cols', cols);
-            ymetadata.set('title', tableEntry.name);
-            console.log("hydrating table metadata title:", ymetadata.get('title'));
 
 			// ensure rows
 			while (ytableData.length < rows) {
@@ -106,6 +105,7 @@ export function createYjsPersistence(prisma: PrismaClient) {
 				}
 			}
 		});
+        printytableData('[yjs][hydrate] hydrating table-data:', ytableData);
 	};
 
 	return {

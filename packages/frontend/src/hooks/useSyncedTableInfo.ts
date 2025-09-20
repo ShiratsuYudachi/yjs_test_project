@@ -1,44 +1,40 @@
 import { useState, useEffect, useRef } from 'react';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
-import { TableMetadata } from '../components/TableDisplay';
+// metadata removed
 
 interface UseCollaborativeTableReturn {
-	metadata: TableMetadata;
 	tableData: string[][];
-	updateMetadata: (newMetadata: TableMetadata) => void;
 	updateCell: (rowIndex: number, colIndex: number, value: string) => void;
+	addRow: () => void;
+	addCol: () => void;
 	isConnected: boolean;
 }
 
 export const useSyncedTableInfo = (
 	documentName: string,
-	initialMetadata: TableMetadata,
 	initialData: string[][] = []
 ): UseCollaborativeTableReturn => {
-	const [metadata, setMetadata] = useState<TableMetadata>(initialMetadata);
 	const [tableData, setTableData] = useState<string[][]>(initialData);
 	const [isConnected, setIsConnected] = useState(false);
 
 	const ydocRef = useRef<Y.Doc | null>(null);
 	const providerRef = useRef<WebsocketProvider | null>(null);
-	const ymetadataRef = useRef<Y.Map<any> | null>(null);
+// no metadata now
 	const ytableDataRef = useRef<Y.Array<Y.Array<string>> | null>(null);
 	
 	// Store initial values in refs to avoid dependency issues
-	const initialMetadataRef = useRef(initialMetadata);
+// removed
 	const initialDataRef = useRef(initialData);
 
 	useEffect(() => {
 		// Create Y.js document and connect to WebSocket
 		const ydoc = new Y.Doc();
 		const provider = new WebsocketProvider('ws://localhost:1234', documentName, ydoc);
-		const ymetadata = ydoc.getMap('table-metadata');
 		const ytableData = ydoc.getArray<Y.Array<string>>('table-data');
 
 		ydocRef.current = ydoc;
 		providerRef.current = provider;
-		ymetadataRef.current = ymetadata;
 		ytableDataRef.current = ytableData;
 
 		// Connection status
@@ -46,12 +42,7 @@ export const useSyncedTableInfo = (
 			setIsConnected(event.status === 'connected');
 		});
 
-		// Initialize Y.js data if empty
-		if (ymetadata.size === 0) {
-			ymetadata.set('rows', initialMetadataRef.current.rows);
-			ymetadata.set('cols', initialMetadataRef.current.cols);
-			ymetadata.set('title', initialMetadataRef.current.title || '');
-		}
+        // no metadata init
 
 		if (ytableData.length === 0 && initialDataRef.current.length > 0) {
 			initialDataRef.current.forEach(row => {
@@ -61,15 +52,7 @@ export const useSyncedTableInfo = (
 			});
 		}
 
-		// Update local state when Y.js metadata changes
-		const updateMetadata = () => {
-			const newMetadata: TableMetadata = {
-				rows: (ymetadata.get('rows') as number) || initialMetadataRef.current.rows,
-				cols: (ymetadata.get('cols') as number) || initialMetadataRef.current.cols,
-				title: (ymetadata.get('title') as string) || initialMetadataRef.current.title || '',
-			};
-			setMetadata(newMetadata);
-		};
+        // no metadata updates
 
 		// Update local state when Y.js table data changes
 		const updateTableData = () => {
@@ -86,18 +69,15 @@ export const useSyncedTableInfo = (
 		};
 
 		// Listen for Y.js changes
-		ymetadata.observe(updateMetadata);
 		ytableData.observe(updateTableData);
 		
 		ytableData.observeDeep(updateTableData);
 
 		// Initial sync
-		updateMetadata();
 		updateTableData();
 
 		// Cleanup
 		return () => {
-			ymetadata.unobserve(updateMetadata);
 			ytableData.unobserve(updateTableData);
 			ytableData.unobserveDeep(updateTableData);
 			provider.destroy();
@@ -124,15 +104,7 @@ export const useSyncedTableInfo = (
 		}
 	};
 
-	// Update metadata
-	const updateMetadata = (newMetadata: TableMetadata) => {
-		if (!ymetadataRef.current) return;
-
-		const ymetadata = ymetadataRef.current;
-		ymetadata.set('rows', newMetadata.rows);
-		ymetadata.set('cols', newMetadata.cols);
-		ymetadata.set('title', newMetadata.title || '');
-	};
+// no metadata updater
 
 	// Update individual cell
 	const updateCell = (rowIndex: number, colIndex: number, value: string) => {
@@ -149,11 +121,29 @@ export const useSyncedTableInfo = (
         console.log("updating ytableData:", ytableData);
 	};
 
+	const addRow = () => {
+		if (!ytableDataRef.current) return;
+		const ytableData = ytableDataRef.current;
+		let maxCols = 0;
+		ytableData.forEach((r) => { if (r.length > maxCols) maxCols = r.length; });
+		const yrow = new Y.Array<string>();
+		for (let i = 0; i < maxCols; i++) yrow.push(['']);
+		ytableData.push([yrow]);
+	};
+
+	const addCol = () => {
+		if (!ytableDataRef.current) return;
+		const ytableData = ytableDataRef.current;
+		ytableData.forEach((yrow) => {
+			yrow.push(['']);
+		});
+	};
+
 	return {
-		metadata,
 		tableData,
-		updateMetadata,
 		updateCell,
+		addRow,
+		addCol,
 		isConnected,
 	};
 };

@@ -32,7 +32,15 @@ export class PrismaTableStore implements TableStore {
 	}
 
 	async create(name: string): Promise<Table> {
-		const r = await this.prisma.table.create({ data: { name: name || 'Untitled Table' , rows: 3, cols: 3 } });
+		const r = await this.prisma.table.create({ data: { name: name || 'Untitled Table' } });
+		// create default 3x3 empty grid by inserting empty cells
+		const emptyCells = [] as { tableId: string; rowIndex: number; colIndex: number; value: string }[];
+		for (let row = 0; row < 3; row++) {
+			for (let col = 0; col < 3; col++) {
+				emptyCells.push({ tableId: r.id, rowIndex: row, colIndex: col, value: '' });
+			}
+		}
+		await this.prisma.tableCell.createMany({ data: emptyCells });
 		return { id: r.id, name: r.name, createdAt: r.createdAt.toISOString() };
 	}
 

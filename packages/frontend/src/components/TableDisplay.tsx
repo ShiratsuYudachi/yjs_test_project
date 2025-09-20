@@ -1,26 +1,22 @@
 import React from 'react';
-import { Container, Title, Button } from '@mantine/core';
+import { Container, Button } from '@mantine/core';
 import { EditableCell } from './EditableCell';
 
-export interface TableMetadata {
-	rows: number;
-	cols: number;
-	title?: string;
-}
-
 interface TableDisplayProps {
-	metadata: TableMetadata;
 	tableData: string[][];
-	onMetadataChange: (newMetadata: TableMetadata) => void;
 	onCellChange: (rowIndex: number, colIndex: number, value: string) => void;
+	onAddRow: () => void;
+	onAddCol: () => void;
 }
 
 export const TableDisplay: React.FC<TableDisplayProps> = ({
-	metadata,
 	tableData,
-	onMetadataChange,
 	onCellChange,
+	onAddRow,
+	onAddCol,
 }) => {
+	const rows = tableData.length;
+	const cols = tableData.reduce((m, r) => Math.max(m, r.length), 0);
 	const getCellValue = (rowIndex: number, colIndex: number): string => {
 		// Return cell value if it exists in tableData, otherwise empty string
 		if (rowIndex < tableData.length && colIndex < tableData[rowIndex].length) {
@@ -30,40 +26,23 @@ export const TableDisplay: React.FC<TableDisplayProps> = ({
 	};
 
 
-	const addNewRow = () => {
-		const newMetadata = { ...metadata, rows: metadata.rows + 1 };
-		onMetadataChange(newMetadata);
-	};
-
-	const addNewCol = () => {
-		const newMetadata = { ...metadata, cols: metadata.cols + 1 };
-		onMetadataChange(newMetadata);
-	};
-
-
 	return (
 		<Container className="py-8">
-			<div className="mb-6">
-				<Title order={2} className="mb-4">
-					{metadata.title}
-				</Title>
-
-				<div className="flex gap-2 mb-4">
-					<Button onClick={addNewRow}>Add New Row</Button>
-					<Button onClick={addNewCol} variant="outline">Add New Column</Button>
-				</div>
+			<div className="flex gap-2 mb-4">
+				<Button onClick={onAddRow}>Add New Row</Button>
+				<Button onClick={onAddCol} variant="outline">Add New Column</Button>
 			</div>
 
 			<div className="table-container border border-gray-300 rounded-lg overflow-hidden">
 				{/* Table Body - Generate based on metadata size */}
 				<div className="table-body">
-					{Array.from({ length: metadata.rows }, (_, rowIndex) => (
+					{Array.from({ length: rows }, (_, rowIndex) => (
 						<div 
 							key={rowIndex} 
 							className={`table-row grid border-b border-gray-300 last:border-b-0`}
-							style={{ gridTemplateColumns: `repeat(${metadata.cols}, 1fr)` }}
+							style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
 						>
-							{Array.from({ length: metadata.cols }, (_, colIndex) => (
+							{Array.from({ length: cols }, (_, colIndex) => (
 								<div key={`${rowIndex}-${colIndex}`} className="border-r border-gray-300 last:border-r-0">
 									<EditableCell
 										value={getCellValue(rowIndex, colIndex)}
@@ -81,9 +60,9 @@ export const TableDisplay: React.FC<TableDisplayProps> = ({
 			{/* Debug Info */}
 			<div className="mt-6 p-4 bg-gray-100 rounded-lg">
 				<h4 className="font-semibold mb-2">Debug Info:</h4>
-				<p className="text-sm">Table Size: {metadata.rows} × {metadata.cols}</p>
+				<p className="text-sm">Table Size: {rows} × {cols}</p>
 				<p className="text-sm">Data Size: {tableData.length} × {tableData[0]?.length || 0}</p>
-				<p className="text-sm">Total Cells: {metadata.rows * metadata.cols} (Data: {tableData.reduce((sum, row) => sum + row.length, 0)})</p>
+				<p className="text-sm">Total Cells: {rows * cols} (Data: {tableData.reduce((sum, row) => sum + row.length, 0)})</p>
 			<table className="text-xs bg-white p-2 rounded border mt-2 overflow-x-auto">
 				<tbody>
 					{tableData.map((row, rowIndex) => (

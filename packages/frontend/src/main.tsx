@@ -2,16 +2,12 @@ import React, { useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import { MantineProvider, Container, Text } from '@mantine/core';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
-import { TableDisplay, TableMetadata } from './components/TableDisplay';
+import { TableDisplay } from './components/TableDisplay';
 import { useSyncedTableInfo } from './hooks/useSyncedTableInfo';
 import { TablesSidebar } from './components/TablesSidebar';
 import './index.css';
 
-// Move constants outside component to prevent re-creation
-const INITIAL_METADATA: TableMetadata = {
-	rows: 3,
-	cols: 3,
-};
+// no metadata needed anymore
 const TableView: React.FC = () => {
 	const { tableId } = useParams<{ tableId: string }>();
 	if (!tableId) {
@@ -25,12 +21,12 @@ const TableView: React.FC = () => {
 		);
 	}
 	const {
-		metadata,
 		tableData,
-		updateMetadata,
 		updateCell,
+		addRow,
+		addCol,
 		isConnected,
-	} = useSyncedTableInfo(tableId, INITIAL_METADATA);
+	} = useSyncedTableInfo(tableId);
 
 	return (
 		<div className="flex h-screen">
@@ -41,10 +37,10 @@ const TableView: React.FC = () => {
 				{isConnected ? ' ✅ Connected' : ' ❌ Disconnected'}
 			</Text>
 			<TableDisplay 
-				metadata={metadata}
 				tableData={tableData}
-				onMetadataChange={updateMetadata}
 				onCellChange={updateCell}
+				onAddRow={addRow}
+				onAddCol={addCol}
 			/>
 			</div>
 		</div>

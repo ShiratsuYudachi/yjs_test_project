@@ -13,8 +13,6 @@ datasource db {
 model Table {
   id         String   @id @default(cuid())
   name       String
-  rows        Int?
-  cols        Int?
   createdAt  DateTime @default(now())
   cells      TableCell[]
 }
