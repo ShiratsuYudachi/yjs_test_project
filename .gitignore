@@ -3,4 +3,17 @@ dist/
 .DS_Store
 *.log
 
+# SQLite databases
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Env files
+.env
+**/.env
+
+# Prisma debug logs
+prisma/*.log
+
 

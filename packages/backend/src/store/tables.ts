@@ -5,41 +5,40 @@ export type Table = {
 };
 
 export interface TableStore {
-	list(): Table[];
-	get(id: string): Table | undefined;
-	create(name: string): Table;
-	delete(id: string): boolean;
+	list(): Promise<Table[]> | Table[];
+	get(id: string): Promise<Table | undefined> | Table | undefined;
+	create(name: string): Promise<Table> | Table;
+	delete(id: string): Promise<boolean> | boolean;
 }
 
-export class InMemoryTableStore implements TableStore {
-	private tablesById: Map<string, Table> = new Map();
+// Prisma-backed store implementation
+import { PrismaClient } from '@prisma/client';
 
-	list(): Table[] {
-		return Array.from(this.tablesById.values());
+export class PrismaTableStore implements TableStore {
+	private prisma: PrismaClient;
+
+	constructor(prisma: PrismaClient) {
+		this.prisma = prisma;
 	}
 
-	get(id: string): Table | undefined {
-		return this.tablesById.get(id);
+	async list(): Promise<Table[]> {
+		const rows = await this.prisma.table.findMany({ orderBy: { createdAt: 'asc' } });
+		return rows.map(r => ({ id: r.id, name: r.name, createdAt: r.createdAt.toISOString() }));
 	}
 
-	create(name: string): Table {
-		const id = this.generateId();
-		const table: Table = { id, name, createdAt: new Date().toISOString() };
-		this.tablesById.set(id, table);
-		return table;
+	async get(id: string): Promise<Table | undefined> {
+		const r = await this.prisma.table.findUnique({ where: { id } });
+		return r ? { id: r.id, name: r.name, createdAt: r.createdAt.toISOString() } : undefined;
 	}
 
-	delete(id: string): boolean {
-		return this.tablesById.delete(id);
+	async create(name: string): Promise<Table> {
+		const r = await this.prisma.table.create({ data: { name: name || 'Untitled Table' } });
+		return { id: r.id, name: r.name, createdAt: r.createdAt.toISOString() };
 	}
 
-	private generateId(): string {
-		const ts = new Date()
-			.toISOString()
-			.replace(/[-:TZ\.]/g, '')
-			.slice(0, 14);
-		const rand = Math.random().toString(36).slice(2, 8);
-		return `${ts}-${rand}`;
+	async delete(id: string): Promise<boolean> {
+		await this.prisma.table.delete({ where: { id } });
+		return true;
 	}
 }
 

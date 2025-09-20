@@ -1,0 +1,12 @@
+node_modules
+# Keep environment variables out of version control
+.env
+
+# SQLite databases
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Prisma output is installed in node_modules now; ensure no custom outputs
+src/generated/

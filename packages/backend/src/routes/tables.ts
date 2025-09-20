@@ -4,20 +4,24 @@ import { TableStore } from '../store/tables';
 export function createTablesRouter(store: TableStore): Router {
 	const router = new Router({ prefix: '/api/tables' });
 
-	router.get('/', (ctx) => {
-		ctx.body = store.list();
-	});
+    router.get('/', async (ctx) => {
+        const data = await store.list();
+        console.log('tables.list ->', data);
+        ctx.body = data;
+    });
 
-	router.post('/', (ctx) => {
+    router.post('/', async (ctx) => {
 		const body = ctx.request.body as { name?: string } | undefined;
 		const name = (body && body.name ? String(body.name) : '').trim();
-		const table = store.create(name || 'Untitled Table');
+        const table = await store.create(name || 'Untitled Table');
+        console.log('tables.create <-', name, '->', table);
 		ctx.status = 201;
 		ctx.body = table;
 	});
 
-	router.get('/:id', (ctx) => {
-		const table = store.get(ctx.params.id);
+    router.get('/:id', async (ctx) => {
+        const table = await store.get(ctx.params.id);
+        console.log('tables.get', ctx.params.id, '->', table);
 		if (!table) {
 			ctx.status = 404;
 			ctx.body = { error: 'Table not found' };
@@ -26,8 +30,9 @@ export function createTablesRouter(store: TableStore): Router {
 		ctx.body = table;
 	});
 
-	router.delete('/:id', (ctx) => {
-		const ok = store.delete(ctx.params.id);
+    router.delete('/:id', async (ctx) => {
+        const ok = await store.delete(ctx.params.id);
+        console.log('tables.delete', ctx.params.id, '->', ok);
 		ctx.status = ok ? 204 : 404;
 		if (!ok) {
 			ctx.body = { error: 'Table not found' };
