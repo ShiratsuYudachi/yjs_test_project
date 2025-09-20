@@ -8,6 +8,7 @@ import { useSyncedTableInfo } from './hooks/useSyncedTableInfo';
 import { TablesSidebar } from './components/TablesSidebar';
 import { PasswordView } from './components/PasswordView';
 import { TableAuthProvider, useTableAuth } from './contexts/TableAuthContext';
+import { UserProvider, useUser } from './contexts/UserContext';
 import './index.css';
 
 // Nickname modal component
@@ -52,7 +53,7 @@ const NicknameModal: React.FC<{ onSubmit: (name: string) => void }> = ({ onSubmi
 
 const TableView: React.FC = () => {
 	const { tableId } = useParams<{ tableId: string }>();
-	const [userName, setUserName] = useState<string | null>(null);
+	const { userName } = useUser();
 	const { password, setStatus } = useTableAuth();
 
 	const handlePasswordError = () => {
@@ -94,7 +95,6 @@ const TableView: React.FC = () => {
 		<Box style={{ display: 'flex', height: '100vh' }}>
 			<TablesSidebar />
 			<Box flex={1} p="xl" style={{ overflow: 'auto' }}>
-				{!userName && <NicknameModal onSubmit={setUserName} />}
 				<Text size="sm" c="blue" mb="md">
 					🔄 Y.js Collaborative Table - Open multiple tabs to see real-time collaboration!
 					{isConnected ? ' ✅ Connected' : ' ❌ Disconnected'}
@@ -130,7 +130,7 @@ const PasswordInputView: React.FC = () => {
 	return (
 		<PasswordView 
 			onPasswordSubmit={handlePasswordSubmit}
-			error={status === 'failed' ? 'Invalid password. Please try again.' : ''}
+			
 			onCancel={handleCancel}
 		/>
 	);
@@ -156,6 +156,24 @@ const TableContainer: React.FC = () => {
 	return <TableView />;
 };
 
+const AppWithUser: React.FC = () => {
+	const { userName, setUserName } = useUser();
+
+	if (!userName) {
+		return <NicknameModal onSubmit={setUserName} />;
+	}
+
+	return (
+		<TableAuthProvider>
+			<Routes>
+				<Route path="/tables" element={<TableContainer />} />
+				<Route path="/tables/:tableId" element={<TableContainer />} />
+				<Route path="*" element={<Navigate to="/tables" replace />} />
+			</Routes>
+		</TableAuthProvider>
+	);
+};
+
 const theme = createTheme({
 	// Use Mantine's default theme
 });
@@ -164,13 +182,9 @@ const App = () => {
 	return (
 		<MantineProvider theme={theme}>
 			<BrowserRouter>
-				<TableAuthProvider>
-					<Routes>
-						<Route path="/tables" element={<TableContainer />} />
-						<Route path="/tables/:tableId" element={<TableContainer />} />
-						<Route path="*" element={<Navigate to="/tables" replace />} />
-					</Routes>
-				</TableAuthProvider>
+				<UserProvider>
+					<AppWithUser />
+				</UserProvider>
 			</BrowserRouter>
 		</MantineProvider>
 	);
