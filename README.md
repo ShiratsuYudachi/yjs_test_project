@@ -20,7 +20,7 @@ yjs_test_project/
 │           ├── contexts/          
 │           ├── hooks/             
 │           ├── service/           # API 服务
-│           └── graphql/           # GraphQL 相关
+│           └── graphql/           # GraphQL API相关
 ```
 
 ## 数据库设计
