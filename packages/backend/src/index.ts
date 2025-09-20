@@ -22,6 +22,7 @@ const tableStore = new PrismaTableStore(prisma);
 // Middlewares
 app.use(cors());
 app.use(bodyParser());
+
 // Basic request/response logger
 app.use(async (ctx, next) => {
 	const start = Date.now();
@@ -39,7 +40,8 @@ app.use(async (ctx, next) => {
 	} catch {
 		bodyPreview = '[unserializable body]';
 	}
-	console.log(`${ctx.method} ${ctx.url} -> ${ctx.status} ${ms}ms`, bodyPreview);
+	// console.log(`${ctx.method} ${ctx.url} -> ${ctx.status} ${ms}ms`, bodyPreview);
+	console.log("[INFO] ", `${ctx.method} ${ctx.url} -> ${ctx.status} ${ms}ms`);
 });
 
 // Routes - Tables API
