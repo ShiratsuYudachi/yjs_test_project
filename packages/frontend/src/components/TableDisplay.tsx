@@ -9,14 +9,14 @@ export interface TableMetadata {
 	description?: string;
 }
 
-interface CollaborativeTableProps {
+interface TableDisplayProps {
 	metadata: TableMetadata;
 	tableData: string[][];
 	onMetadataChange: (newMetadata: TableMetadata) => void;
 	onCellChange: (rowIndex: number, colIndex: number, value: string) => void;
 }
 
-export const CollaborativeTable: React.FC<CollaborativeTableProps> = ({
+export const TableDisplay: React.FC<TableDisplayProps> = ({
 	metadata,
 	tableData,
 	onMetadataChange,
