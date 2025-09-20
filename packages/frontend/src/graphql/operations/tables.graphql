@@ -1,0 +1,13 @@
+query Tables {
+	tables { id name createdAt }
+}
+
+mutation CreateTable($name: String!) {
+	createTable(name: $name) { id name createdAt }
+}
+
+mutation DeleteTable($id: ID!) {
+	deleteTable(id: $id)
+}
+
+
