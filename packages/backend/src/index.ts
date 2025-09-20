@@ -4,7 +4,7 @@ import cors from '@koa/cors';
 import bodyParser from 'koa-bodyparser';
 import { WebSocketServer } from 'ws';
 // @ts-ignore
-import { setupWSConnection } from 'y-websocket/bin/utils';
+import { setupWSConnection, setPersistence } from 'y-websocket/bin/utils';
 import {PrismaTableStore } from './store/tables';
 import { ApolloServer } from '@apollo/server';
 import { koaMiddleware } from '@as-integrations/koa';
@@ -12,6 +12,7 @@ import { resolvers } from './graphql/resolvers';
 import fs from 'fs';
 import path from 'path';
 import { PrismaClient } from '@prisma/client';
+import { createYjsPersistence } from './yjs/persistence';
 
 const app = new Koa();
 const router = new Router();
@@ -21,6 +22,9 @@ const wsPort = parseInt(process.env.WS_PORT || '1234');
 // Initialize Prisma and stores (swap to Prisma store by default)
 const prisma = new PrismaClient();
 const tableStore = new PrismaTableStore(prisma);
+const yjsPersistence = createYjsPersistence(prisma);
+// register persistence globally for y-websocket
+setPersistence(yjsPersistence as any);
 
 // Middlewares
 app.use(cors());
