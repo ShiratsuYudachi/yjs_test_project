@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import { MantineProvider, Container, Text, Modal, TextInput, Button, createTheme, Box } from '@mantine/core';
+import { MantineProvider, Container, Text, Modal, TextInput, Button, createTheme, Box, Loader, Center } from '@mantine/core';
 import '@mantine/core/styles.css';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
 import { TableDisplay } from './components/TableDisplay';
@@ -97,7 +97,7 @@ const TableView: React.FC = () => {
 			<Box flex={1} p="xl" style={{ overflow: 'auto' }}>
 				<Text size="sm" c="blue" mb="md">
 					🔄 Y.js Collaborative Table - Open multiple tabs to see real-time collaboration!
-					{isConnected ? ' ✅ Connected' : ' ❌ Disconnected'}
+					{isConnected ? ' ✅ Connected' : ' 🔄 Connecting...'}
 					{userName && ` | Hello, ${userName}!`}
 				</Text>
 				<TableDisplay 
@@ -138,16 +138,50 @@ const PasswordInputView: React.FC = () => {
 
 const TableContainer: React.FC = () => {
 	const { status, setPassword, setStatus } = useTableAuth();
+	const [loading, setLoading] = useState(false);
+	const { tableId } = useParams<{ tableId: string }>();
 
-    const { tableId } = useParams<{ tableId: string }>();
-    useEffect(() => {
-        console.log("updating status")
-        if (tableId) {
+	useEffect(() => {
+		console.log("updating status")
+		if (tableId) {
+			setLoading(true);
+			setPassword(null);
+			setStatus('OK');
+			
+			// Show loading for a brief moment to give visual feedback
+			const timer = setTimeout(() => {
+				setLoading(false);
+			}, 300);
+			
+			return () => clearTimeout(timer);
+		}
+	}, [tableId, setPassword, setStatus]);
 
-            setPassword(null);
-            setStatus('OK');
-        }
-    }, [tableId]);
+	if (loading) {
+		return (
+			<Box style={{ display: 'flex', height: '100vh' }}>
+				<TablesSidebar />
+				<Box 
+					flex={1} 
+					style={{ 
+						display: 'flex', 
+						alignItems: 'center', 
+						justifyContent: 'center',
+						background: 'linear-gradient(135deg, var(--mantine-color-blue-0) 0%, var(--mantine-color-indigo-0) 100%)',
+						animation: 'fadeIn 0.3s ease-in-out'
+					}}
+				>
+					<Center>
+						<Box ta="center">
+							<Loader size="xl" mb="lg" color="blue" />
+							<Text size="lg" fw={500} c="blue" mb="xs">Loading table...</Text>
+							<Text size="sm" c="dimmed">Preparing your collaborative workspace</Text>
+						</Box>
+					</Center>
+				</Box>
+			</Box>
+		);
+	}
 
 	if (status === 'failed') {
 		return <PasswordInputView />;
