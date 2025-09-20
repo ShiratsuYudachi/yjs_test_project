@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
-import { MantineProvider, Container, Title, Textarea, Text } from '@mantine/core';
+import { MantineProvider, Container, Title, Textarea, Text, Divider } from '@mantine/core';
+import { CollaborativeTable, TableMetadata } from './components/CollaborativeTable';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import './index.css';
@@ -65,7 +66,7 @@ const CollaborativeEditor = () => {
 	}, []);
 
 	return (
-		<div className="w-full max-w-4xl mx-auto">
+		<div className="w-full max-w-4xl mx-auto mb-8">
 			<Title order={2} className="mb-4">Collaborative Text Editor</Title>
 			<Text size="sm" className="mb-4 text-gray-600">
 				Open this page in multiple tabs or browsers to see real-time collaboration!
@@ -80,11 +81,46 @@ const CollaborativeEditor = () => {
 	);
 };
 
+const TableDemo = () => {
+	const [metadata, setMetadata] = useState<TableMetadata>({
+		rows: 3,
+		cols: 3,
+		title: 'My Collaborative Table',
+		description: 'Click on any cell to edit. All cells are treated equally - no column headers needed.',
+	});
+
+	const [tableData, setTableData] = useState<string[][]>([
+		['John Doe', 'john@example.com', '25'],
+		['Jane Smith', 'jane@example.com', '30'],
+		['Bob Johnson', 'bob@example.com', '35'],
+	]);
+
+	const handleDataChange = (newData: string[][]) => {
+		setTableData(newData);
+	};
+
+	const handleMetadataChange = (newMetadata: TableMetadata) => {
+		setMetadata(newMetadata);
+		console.log('Table metadata changed:', newMetadata);
+	};
+
+	return (
+		<CollaborativeTable 
+			metadata={metadata}
+			tableData={tableData}
+			onDataChange={handleDataChange}
+			onMetadataChange={handleMetadataChange}
+		/>
+	);
+};
+
 const App = () => {
 	return (
 		<MantineProvider>
 			<Container className="min-h-screen py-8">
 				<CollaborativeEditor />
+				<Divider className="my-8" />
+				<TableDemo />
 			</Container>
 		</MantineProvider>
 	);
@@ -95,5 +131,3 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 		<App />
 	</React.StrictMode>
 );
-
-
