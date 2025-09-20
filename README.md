@@ -29,22 +29,22 @@ yjs_test_project/
 // Prisma Schema
 // 表格主表
 model Table {
-  id         String   @id @default(cuid())  // 唯一标识符
-  name       String                         // 表格名称
+  id         String   @id @default(cuid())  
+  name       String                         
   password   String?                        // 可选密码保护
-  createdAt  DateTime @default(now())       // 创建时间
+  createdAt  DateTime @default(now())      
   cells      TableCell[]                    // 关联的单元格
 }
 
 // 表格单元格
 model TableCell {
-  id        String  @id @default(cuid())    // 唯一标识符
+  id        String  @id @default(cuid())    
   table     Table   @relation(fields: [tableId], references: [id], onDelete: Cascade)
   tableId   String                          // 关联表格ID
   rowIndex  Int                             // 行索引
   colIndex  Int                             // 列索引
   value     String                          // 单元格内容
-  updatedAt DateTime @updatedAt             // 自动更新时间
+  updatedAt DateTime @updatedAt             
 
   @@unique([tableId, rowIndex, colIndex])   // 确保每个位置唯一
 }
